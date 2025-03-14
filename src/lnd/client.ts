@@ -1,8 +1,9 @@
 import { readFileSync } from 'fs';
-import * as lnService from 'ln-service';
 import { Config } from '../config';
 import logger from '../utils/logger';
 import { sanitizeError } from '../utils/sanitize';
+import { LndService } from './lnd-service.interface';
+import { LndServiceFactory } from './lnd-service-factory';
 
 /**
  * LND Authentication type for connecting to an LND node
@@ -20,16 +21,21 @@ export interface LndAuthentication {
  * LND Client class to handle interactions with the Lightning Network Daemon
  */
 export class LndClient {
-  private lnd: lnService.AuthenticatedLnd;
+  private lnd: any; // Using any instead of lnService.AuthenticatedLnd to support both real and mock
   private config: Config;
+  // Make lndService protected so it can be accessed by derived classes and within the same package
+  protected lndService: LndService;
 
   /**
-   * Initialize the LND client with configuration
+   * Initialize the LND client with configuration and optional LND service
    * @param config Application configuration containing LND connection details
+   * @param lndService Optional LND service implementation (for dependency injection)
    * @throws Error if connection cannot be established
    */
-  constructor(config: Config) {
+  constructor(config: Config, lndService?: LndService) {
     this.config = config;
+    // Use provided service or create one using the factory
+    this.lndService = lndService || LndServiceFactory.createLndService(config);
     this.lnd = this.createLndConnection();
   }
 
@@ -38,7 +44,7 @@ export class LndClient {
    * @returns Authenticated LND instance
    * @throws Error if TLS certificate or macaroon cannot be read
    */
-  private createLndConnection(): lnService.AuthenticatedLnd {
+  private createLndConnection(): any {
     try {
       // Read the TLS certificate and macaroon files
       const tlsCert = readFileSync(this.config.lnd.tlsCertPath, 'utf8');
@@ -54,9 +60,9 @@ export class LndClient {
         socket,
       };
 
-      // Create the authenticated LND client
-      logger.info(`Creating LND connection to ${socket}`);
-      return lnService.authenticatedLndGrpc(auth);
+      // Create the authenticated LND client using the service
+      logger.info(`Creating ${this.config.lnd.useMockLnd ? 'mock' : 'real'} LND connection to ${socket}`);
+      return this.lndService.authenticatedLndGrpc(auth);
     } catch (error) {
       const sanitizedError = sanitizeError(error);
       logger.error(`Failed to create LND connection: ${sanitizedError.message}`);
@@ -68,8 +74,16 @@ export class LndClient {
    * Get the LND client instance
    * @returns Authenticated LND instance
    */
-  getLnd(): lnService.AuthenticatedLnd {
+  getLnd(): any {
     return this.lnd;
+  }
+
+  /**
+   * Get the LND service instance
+   * @returns LND service instance
+   */
+  getLndService(): LndService {
+    return this.lndService;
   }
 
   /**
@@ -79,8 +93,8 @@ export class LndClient {
    */
   async checkConnection(): Promise<boolean> {
     try {
-      // Get wallet info as a simple check
-      await lnService.getWalletInfo({ lnd: this.lnd });
+      // Get wallet info as a simple check using the service
+      await this.lndService.getWalletInfo({ lnd: this.lnd });
       logger.info('LND connection successful');
       return true;
     } catch (error) {
@@ -111,5 +125,6 @@ export class LndClient {
  * @returns LND client instance
  */
 export function createLndClient(config: Config): LndClient {
-  return new LndClient(config);
+  const lndService = LndServiceFactory.createLndService(config);
+  return new LndClient(config, lndService);
 }

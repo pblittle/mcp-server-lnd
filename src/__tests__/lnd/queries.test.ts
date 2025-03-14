@@ -16,6 +16,15 @@ describe('LND Queries', () => {
   const mockLnd = { id: 'mock-lnd-instance' };
   const mockClient = {
     getLnd: jest.fn().mockReturnValue(mockLnd),
+    // Add getLndService method to mock the new dependency injection approach
+    getLndService: jest.fn().mockReturnValue({
+      getChainBalance: lnService.getChainBalance,
+      getChannelBalance: lnService.getChannelBalance,
+      getWalletInfo: lnService.getWalletInfo,
+      getNodeInfo: lnService.getNodeInfo,
+      // Add any other methods that might be needed
+      authenticatedLndGrpc: lnService.authenticatedLndGrpc
+    }),
   } as unknown as LndClient;
 
   beforeEach(() => {

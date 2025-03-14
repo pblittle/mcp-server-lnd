@@ -1,4 +1,3 @@
-import * as lnService from 'ln-service';
 import { LndClient } from './client';
 import {
   WalletBalanceResponse,
@@ -27,8 +26,8 @@ export async function getWalletBalance(client: LndClient): Promise<WalletBalance
   try {
     const lnd = client.getLnd();
 
-    // Get wallet balance from LND
-    const { confirmed_balance, unconfirmed_balance } = await lnService.getChainBalance({ lnd });
+    // Get wallet balance from LND using the client's LndService
+    const { confirmed_balance, unconfirmed_balance } = await client.getLndService().getChainBalance({ lnd });
 
     // Calculate total balance
     const total_balance = confirmed_balance + unconfirmed_balance;
@@ -63,8 +62,8 @@ export async function getChannelBalance(client: LndClient): Promise<ChannelBalan
   try {
     const lnd = client.getLnd();
 
-    // Get channel balance from LND
-    const { channel_balance, pending_balance } = await lnService.getChannelBalance({ lnd });
+    // Get channel balance from LND using the client's LndService
+    const { channel_balance, pending_balance } = await client.getLndService().getChannelBalance({ lnd });
 
     // Format the response
     const response: ChannelBalanceResponse = {
@@ -127,7 +126,7 @@ export async function getNodeData(client: LndClient): Promise<NodeData> {
   try {
     const lnd = client.getLnd();
 
-    // Get node info from LND
+    // Get node info from LND using the client's LndService
     const {
       alias,
       public_key: identity_pubkey,
@@ -138,7 +137,7 @@ export async function getNodeData(client: LndClient): Promise<NodeData> {
       is_synced_to_chain: synced_to_chain,
       is_testnet: testnet,
       chains,
-    } = await lnService.getWalletInfo({ lnd });
+    } = await client.getLndService().getWalletInfo({ lnd });
 
     // Get balance information
     const walletBalance = await getWalletBalance(client);

@@ -54,7 +54,9 @@ describe('LndClient', () => {
         macaroon: 'mock-macaroon',
         socket: 'localhost:10009',
       });
-      expect(logger.info).toHaveBeenCalledWith('Creating LND connection to localhost:10009');
+      // Check for both log messages in the correct order
+      expect(logger.info).toHaveBeenNthCalledWith(1, 'Creating real LND service');
+      expect(logger.info).toHaveBeenNthCalledWith(2, 'Creating real LND connection to localhost:10009');
     });
 
     test('should throw an error if TLS certificate file read fails', () => {

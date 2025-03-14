@@ -1,4 +1,3 @@
-import * as lnService from 'ln-service';
 import { LndClient } from '../../lnd/client';
 import { Intent } from '../../types/intent';
 import { Channel, ChannelQueryResult, ChannelSummary } from '../../types/channel';
@@ -62,9 +61,9 @@ export class ChannelQueryHandler {
 
   private async getChannelData(): Promise<ChannelQueryResult> {
     try {
-      // Get channels from LND
+      // Get channels from LND using the client's LndService
       const lnd = this.lndClient.getLnd();
-      const { channels } = await lnService.getChannels({ lnd });
+      const { channels } = await this.lndClient.getLndService().getChannels({ lnd });
 
       if (!channels || !Array.isArray(channels)) {
         return {
@@ -96,8 +95,8 @@ export class ChannelQueryHandler {
       const channelsWithAliases = await Promise.all(
         channels.map(async (channel) => {
           try {
-            // Get node info to get alias
-            const nodeInfo = await lnService.getNodeInfo({
+            // Get node info to get alias using the client's LndService
+            const nodeInfo = await this.lndClient.getLndService().getNodeInfo({
               lnd,
               public_key: channel.remote_pubkey,
             });
